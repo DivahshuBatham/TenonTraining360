@@ -1,0 +1,25 @@
+{
+  "splash_text":"सक्षम बाय टेनन",
+  "login": "लॉगिन",
+  "send_otp":"otp पाठवा",
+  "verify_otp":"OTP सत्यापित करा",
+  "enterOTP": "तुमचा OTP टाका",
+
+  "enterMobileNumber": "तुमचा मोबाईल नंबर टाका",
+    "mobileNumber": "मोबाईल नंबर",
+
+
+  "_virtualTrainings": "आभासी प्रशिक्षण",
+  "_scheduleTraining": "वेळापत्रक प्रशिक्षण",
+  "_joinTraining": "प्रशिक्षणात सामील व्हा",
+  "_noVirtualTrainings": "कोणतेही आभासी प्रशिक्षण आढळले नाही",
+  "_courseName": "अभ्यासक्रमाचे नाव",
+  "_trainerName": "प्रशिक्षकाचे नाव",
+  "_siteName": "साइटचे नाव",
+  "_totalTrainees": "एकूण प्रशिक्षणार्थी",
+  "_date": "तारीख",
+  "_time": "वेळ",
+  "_trainingStatus": "प्रशिक्षण स्थिती",
+  "_totalAttendance": "एकूण उपस्थिती"
+
+}

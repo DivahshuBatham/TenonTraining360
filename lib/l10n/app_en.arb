@@ -1,0 +1,26 @@
+{
+  "splash_text": "Saksham By Tenon",
+  "login": "login",
+  "send_otp":"Send OTP",
+  "verify_otp":"Verify OTP",
+  "enterOTP": "Enter your OTP",
+
+
+  "enterMobileNumber": "Enter your mobile number",
+  "mobileNumber": "Mobile Number",
+
+
+
+  "virtualTrainings": "Virtual Trainings",
+  "scheduleTraining": "Schedule Training",
+  "joinTraining": "Join Training",
+  "noVirtualTrainings": "No virtual trainings found.",
+  "courseName": "Course Name",
+  "trainerName": "Trainer Name",
+  "siteName": "Site Name",
+  "totalTrainees": "Total Trainees",
+  "date": "Date",
+  "time": "Time",
+  "trainingStatus": "Training Status",
+  "totalAttendance": "Total Attendance"
+}

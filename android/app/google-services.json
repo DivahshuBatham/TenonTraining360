@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "708533335878",
+    "project_id": "sakshamapp-952ea",
+    "storage_bucket": "sakshamapp-952ea.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:708533335878:android:f925e5f02c80cdb68d5747",
+        "android_client_info": {
+          "package_name": "com.tenongroup.saksham"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA8ktiXGkEo0ZB0mrusL2_tDrwGDsLeiX4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

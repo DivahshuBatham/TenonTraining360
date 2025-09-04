@@ -1,0 +1,25 @@
+{
+  "splash_text":"ಸಕ್ಷಮ್ ಬೈ ಟೆನಾನ್",
+  "login": "ಲಾಗಿನ್",
+  "send_otp":"ಒಟಿಪಿ ಕಳುಹಿಸಿ",
+  "verify_otp":"OTP ಪರಿಶೀಲಿಸಿ",
+  "enterOTP": "ನಿಮ್ಮ OTP ನಮೂದಿಸಿ",
+
+  "enterMobileNumber": "ನಿಮ್ಮ ಮೊಬೈಲ್ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ",
+    "mobileNumber": "ಮೊಬೈಲ್ ಸಂಖ್ಯೆ",
+
+
+
+  "_virtualTrainings": "ವರ್ಚುವಲ್ ತರಬೇತಿಗಳು",
+  "_scheduleTraining": "ವೇಳಾಪಟ್ಟಿ ತರಬೇತಿ",
+  "_joinTraining": "ತರಬೇತಿಗೆ ಸೇರಿಕೊಳ್ಳಿ",
+  "_noVirtualTrainings": "ಯಾವುದೇ ವರ್ಚುವಲ್ ತರಬೇತಿಗಳು ಕಂಡುಬಂದಿಲ್ಲ",
+  "_courseName": "ಕೋರ್ಸ್ ಹೆಸರು",
+  "_trainerName": "ತರಬೇತುದಾರ ಹೆಸರು",
+  "_siteName": "ಸೈಟ್ ಹೆಸರು",
+  "_totalTrainees": "ಒಟ್ಟು ಪ್ರಶಿಕ್ಷಣಾರ್ಥಿಗಳು",
+  "_date": "ದಿನಾಂಕ",
+  "_time": "ಸಮಯ",
+  "_trainingStatus": "ತರಬೇತಿ ಸ್ಥಿತಿ",
+  "_totalAttendance": "ಒಟ್ಟು ಹಾಜರಾತಿ"
+}

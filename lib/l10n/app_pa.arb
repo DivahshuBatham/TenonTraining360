@@ -1,0 +1,25 @@
+{
+  "splash_text": "ਸਕਸ਼ਮ ਬਾਏ ਟੇਨਨ",
+  "login": "ਲਾਗਿਨ",
+  "send_otp": "otp ਭੇਜੋ",
+  "varify_otp": "OTP ਦੀ ਪੁਸ਼ਟੀ ਕਰੋ",
+  "enterOTP": "ਆਪਣਾ OTP ਦਾਖਲ ਕਰੋ",
+
+  "enterMobileNumber": "ਆਪਣਾ ਮੋਬਾਈਲ ਨੰਬਰ ਦਰਜ ਕਰੋ",
+    "mobileNumber": "ਮੋਬਾਇਲ ਨੰਬਰ",
+
+
+  "_virtualTrainings": "ਵਰਚੁਅਲ ਸਿਖਲਾਈ",
+  "_scheduleTraining": "ਅਨੁਸੂਚੀ ਸਿਖਲਾਈ",
+  "_joinTraining": "ਸਿਖਲਾਈ ਵਿੱਚ ਸ਼ਾਮਲ ਹੋਵੋ",
+  "_noVirtualTrainings": "ਕੋਈ ਵਰਚੁਅਲ ਸਿਖਲਾਈ ਨਹੀਂ ਮਿਲੀ",
+  "_courseName": "ਕੋਰਸ ਦਾ ਨਾਮ",
+  "_trainerName": "ਟ੍ਰੇਨਰ ਦਾ ਨਾਮ",
+  "_siteName": "ਸਾਈਟ ਦਾ ਨਾਮ",
+  "_totalTrainees": "ਕੁੱਲ ਸਿਖਿਆਰਥੀ",
+  "_date": "ਮਿਤੀ",
+  "_time": "ਸਮਾਂ",
+  "_trainingStatus": "ਸਿਖਲਾਈ ਸਥਿਤੀ",
+  "_totalAttendance": "ਕੁੱਲ ਹਾਜ਼ਰੀ"
+
+}

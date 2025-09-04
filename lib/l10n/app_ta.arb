@@ -1,0 +1,25 @@
+{
+  "splash_text": "டெனான் எழுதிய சாக்ஷாம்",
+  "login": "உள்நுழைக",
+  "send_otp":"otp அனுப்பவும்",
+  "verify_otp": "OTP ஐ சரிபார்க்கவும்",
+  "enterOTP": "உங்கள் OTP ஐ உள்ளிடவும்",
+
+  "enterMobileNumber": "உங்கள் மொபைல் எண்ணை உள்ளிடவும்",
+    "mobileNumber": "மொபைல் எண்",
+
+
+  "_virtualTrainings": "மெய்நிகர் பயிற்சிகள்",
+  "_scheduleTraining": "அட்டவணை பயிற்சி",
+  "_joinTraining": "பயிற்சியில் சேரவும்",
+  "_noVirtualTrainings": "மெய்நிகர் பயிற்சிகள் எதுவும் கிடைக்கவில்லை",
+  "_courseName": "பாடத்தின் பெயர்",
+  "_trainerName": "பயிற்சியாளர் பெயர்",
+  "_siteName": "தளத்தின் பெயர்",
+  "_totalTrainees": "மொத்த பயிற்சியாளர்கள்",
+  "_date": "தேதி",
+  "_time": "நேரம்",
+  "_trainingStatus": "பயிற்சி நிலை",
+  "_totalAttendance": "மொத்த வருகை"
+
+}
