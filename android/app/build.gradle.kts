@@ -7,6 +7,7 @@ plugins {
     // Flutter plugin must be applied after Android/Kotlin
     id("dev.flutter.flutter-gradle-plugin")
     id("com.google.gms.google-services")
+    id("com.google.firebase.crashlytics")
 }
 
 val keystoreProperties = Properties()
@@ -48,14 +49,25 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = true
-            isShrinkResources = true
+            // Enable or disable minification/shrinking
+            isMinifyEnabled = false       // disable code shrinking
+            isShrinkResources = false   // disable resource shrinking
+
+            // Signing config
             signingConfig = signingConfigs.getByName("release")
+
+            // Proguard files (required if isMinifyEnabled is true)
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 file("proguard-rules.pro")
             )
         }
+    }
+
+
+    lint {
+        checkReleaseBuilds =false
+        abortOnError =false
     }
 }
 

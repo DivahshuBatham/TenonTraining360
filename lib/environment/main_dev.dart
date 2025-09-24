@@ -1,12 +1,30 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:tenon_training_app/main.dart';
-
+import '../main.dart';
 import 'Environment.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+
+  if (kIsWeb) {
+    await Firebase.initializeApp(
+      options: const FirebaseOptions(
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_AUTH_DOMAIN",
+        projectId: "tenontraining360",
+        storageBucket: "tenontraining360.appspot.com",
+        messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+        appId: "YOUR_APP_ID",
+        measurementId: "YOUR_MEASUREMENT_ID",
+      ),
+    );
+  } else {
+    await Firebase.initializeApp();
+  }
+
+  // ✅ Set environment here
   AppConfig.setEnvironment(Environment.dev);
-  runApp(MyApp());
+
+  runApp(const MyApp());
 }

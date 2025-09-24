@@ -1,6 +1,9 @@
+import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -9,7 +12,7 @@ import 'environment/Environment.dart';
 import 'splash.dart';
 import 'networking/api_config.dart';
 import 'shared_preference/shared_preference_manager.dart';
-import 'NotificationScreen.dart'; // keep file name exactly as in your project
+import 'NotificationScreen.dart';
 import 'l10n/app_localizations.dart';
 
 // ---------------- Notifications setup ----------------
@@ -24,10 +27,21 @@ const AndroidNotificationChannel _defaultChannel = AndroidNotificationChannel(
   importance: Importance.high,
 );
 
-// Top-level or static function for background messages
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(
+    options: kIsWeb
+        ? const FirebaseOptions(
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      projectId: "tenontraining360",
+      storageBucket: "tenontraining360.appspot.com",
+      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+      appId: "YOUR_APP_ID",
+      measurementId: "YOUR_MEASUREMENT_ID",
+    )
+        : null,
+  );
 
   final notification = message.notification;
   final android = message.notification?.android;
@@ -51,7 +65,6 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   }
 }
 
-/// Navigate to NotificationScreen when a notification is tapped.
 void _handleNotificationTap() {
   ApiConfig.showToastMessage('Notification is clicked');
   final navigatorState = MyApp.navigatorKey.currentState;
@@ -69,7 +82,7 @@ void _handleNotificationTap() {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Read env from --dart-define=ENV=dev|staging|production
+  // ---------------- Set environment ----------------
   const env = String.fromEnvironment('ENV', defaultValue: 'dev');
   switch (env) {
     case 'production':
@@ -83,101 +96,96 @@ Future<void> main() async {
   }
   debugPrint("Running Environment: ${AppConfig.environment}");
 
-  // Initialize Firebase
-  try {
-    if (Firebase.apps.isEmpty) {
-      if (kIsWeb) {
-        // TODO: Fill in real web options if you run on web
-        await Firebase.initializeApp(
-          options: const FirebaseOptions(
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_AUTH_DOMAIN",
-            projectId: "tenontraining360",
-            storageBucket: "tenontraining360.firebasestorage.app",
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-            appId: "YOUR_APP_ID",
-            measurementId: "YOUR_MEASUREMENT_ID",
+  // ---------------- Initialize Firebase ----------------
+  if (kIsWeb) {
+    await Firebase.initializeApp(
+      options: const FirebaseOptions(
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_AUTH_DOMAIN",
+        projectId: "tenontraining360",
+        storageBucket: "tenontraining360.appspot.com",
+        messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+        appId: "YOUR_APP_ID",
+        measurementId: "YOUR_MEASUREMENT_ID",
+      ),
+    );
+  } else {
+    await Firebase.initializeApp();
+  }
+
+  // ---------------- Crashlytics Setup ----------------
+  // Catch Flutter framework errors
+  FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+
+  // Catch platform-level errors
+  PlatformDispatcher.instance.onError = (error, stack) {
+    FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+    return true;
+  };
+
+  // Catch async errors
+  runZonedGuarded<Future<void>>(() async {
+    await _setupFirebaseMessaging();
+    runApp(const MyApp());
+  }, (error, stack) {
+    FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+  });
+}
+
+// ---------------- Firebase Messaging & Local Notifications Setup ----------------
+Future<void> _setupFirebaseMessaging() async {
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+  const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+  const initSettings = InitializationSettings(android: androidSettings);
+
+  await flutterLocalNotificationsPlugin.initialize(
+    initSettings,
+    onDidReceiveNotificationResponse: (_) => _handleNotificationTap(),
+  );
+
+  await flutterLocalNotificationsPlugin
+      .resolvePlatformSpecificImplementation<
+      AndroidFlutterLocalNotificationsPlugin>()
+      ?.createNotificationChannel(_defaultChannel);
+
+  await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
+    alert: true,
+    badge: true,
+    sound: true,
+  );
+
+  await FirebaseMessaging.instance.requestPermission();
+
+  FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
+    final notification = message.notification;
+    final android = message.notification?.android;
+    if (notification != null && android != null) {
+      await flutterLocalNotificationsPlugin.show(
+        notification.hashCode,
+        notification.title,
+        notification.body,
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'default_channel',
+            'Default Channel',
+            channelDescription: 'Used for important notifications.',
+            importance: Importance.high,
+            priority: Priority.high,
+            icon: '@mipmap/ic_launcher',
           ),
-        );
-      } else {
-        await Firebase.initializeApp();
-      }
+        ),
+      );
     }
+  });
 
-    // Must be set before using background messaging
-    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
+  if (initialMessage != null) _handleNotificationTap();
 
-    // Local notifications init
-    const AndroidInitializationSettings androidSettings =
-    AndroidInitializationSettings('@mipmap/ic_launcher');
-
-    final InitializationSettings initSettings =
-    const InitializationSettings(android: androidSettings);
-
-    await flutterLocalNotificationsPlugin.initialize(
-      initSettings,
-      onDidReceiveNotificationResponse: (_) => _handleNotificationTap(),
-    );
-
-    // Create Android notification channel (Android 8+)
-    await flutterLocalNotificationsPlugin
-        .resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(_defaultChannel);
-
-    // iOS/macOS foreground presentation options (no-op on Android)
-    await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
-
-    // Ask permissions on iOS
-    await FirebaseMessaging.instance.requestPermission();
-
-    // Show notifications when a message arrives in foreground
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
-      final notification = message.notification;
-      final android = message.notification?.android;
-      if (notification != null && android != null) {
-        await flutterLocalNotificationsPlugin.show(
-          notification.hashCode,
-          notification.title,
-          notification.body,
-          const NotificationDetails(
-            android: AndroidNotificationDetails(
-              'default_channel',
-              'Default Channel',
-              channelDescription: 'Used for important notifications.',
-              importance: Importance.high,
-              priority: Priority.high,
-              icon: '@mipmap/ic_launcher',
-            ),
-          ),
-        );
-      }
-    });
-  } catch (e) {
-    debugPrint('Firebase initialization error: $e');
-  }
-
-  // Run app
-  runApp(const MyApp());
-
-  // Handle notification when app opened from terminated state
-  try {
-    final initial = await FirebaseMessaging.instance.getInitialMessage();
-    if (initial != null) _handleNotificationTap();
-  } catch (e) {
-    debugPrint('getInitialMessage error: $e');
-  }
-
-  // Handle when app reopened from background by tapping notification
   FirebaseMessaging.onMessageOpenedApp.listen((_) => _handleNotificationTap());
 }
 
 // ---------------- App ----------------
-
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
@@ -204,9 +212,7 @@ class _MyAppState extends State<MyApp> {
   }
 
   void setLocale(Locale newLocale) {
-    setState(() {
-      _locale = newLocale;
-    });
+    setState(() => _locale = newLocale);
   }
 
   Future<void> _loadLocale() async {
@@ -216,23 +222,21 @@ class _MyAppState extends State<MyApp> {
       if (langCode != null && mounted) {
         setState(() => _locale = Locale(langCode));
       }
-    } catch (e) {
+    } catch (e, st) {
       debugPrint('Error loading locale: $e');
+      FirebaseCrashlytics.instance.recordError(e, st);
     }
   }
 
-  /// Grab and store current token once on startup
   Future<void> _cacheFcmToken() async {
     try {
       final pref = SharedPreferenceManager();
       final token = await FirebaseMessaging.instance.getToken();
-      if (token != null) {
-        await pref.saveToken(token);
-      }
-      // Also keep saving on refresh
+      if (token != null) await pref.saveToken(token);
       FirebaseMessaging.instance.onTokenRefresh.listen(pref.saveToken);
-    } catch (e) {
+    } catch (e, st) {
       debugPrint('Error fetching FCM token: $e');
+      FirebaseCrashlytics.instance.recordError(e, st);
     }
   }
 

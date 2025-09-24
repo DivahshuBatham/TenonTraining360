@@ -36,10 +36,17 @@ class _SplashScreenState extends State<SplashScreen>
       duration: const Duration(milliseconds: 2000),
     )..forward();
 
+    // Initialize video (optional, doesn't block navigation)
     _initializeVideo();
-    _setupNavigationTimeout();
 
-    // Save refreshed FCM token (initial save is handled in MyApp)
+    // Fallback: always navigate after 3 seconds
+    Future.delayed(const Duration(seconds: 3), () {
+      if (!_initialized && mounted) {
+        _checkLanguageAndNavigate();
+      }
+    });
+
+    // Save FCM token if refreshed
     FirebaseMessaging.instance.onTokenRefresh.listen(_pref.saveToken);
   }
 
@@ -51,22 +58,30 @@ class _SplashScreenState extends State<SplashScreen>
 
       controller.initialize().then((_) {
         if (!mounted) return;
-        setState(() {
-          _videoInitialized = true;
-        });
+        setState(() => _videoInitialized = true);
+
         controller
-          ..setLooping(true)
+          ..setLooping(false)
           ..setVolume(0.0)
           ..play();
+
+        // Video end triggers navigation if not already initialized
+        controller.addListener(() {
+          if (controller.value.position >= controller.value.duration &&
+              !_initialized) {
+            _checkLanguageAndNavigate();
+          }
+        });
       }).catchError((e) {
+        debugPrint('Video initialization error: $e');
         if (!mounted) return;
         setState(() {
           _isVideoError = true;
           _videoInitialized = true;
         });
-        debugPrint('Video initialization error: $e');
       });
     } catch (e) {
+      debugPrint('Video initialization exception: $e');
       if (!mounted) return;
       setState(() {
         _isVideoError = true;
@@ -75,41 +90,27 @@ class _SplashScreenState extends State<SplashScreen>
     }
   }
 
-  void _setupNavigationTimeout() {
-    // Wait for video initialization or fallback after 3 seconds
-    Future.delayed(const Duration(seconds: 3), () {
-      if (!mounted) return;
-      if (!_videoInitialized) {
-        setState(() {
-          _isVideoError = true;
-          _videoInitialized = true;
-        });
-      }
-      _checkLanguageAndNavigate();
-    });
-  }
-
   Future<void> _checkLanguageAndNavigate() async {
+    if (_initialized) return;
+
     try {
       final code = await _pref.getLanguageCode();
+      if (!mounted) return;
+
       if (code == null) {
-        if (!mounted) return;
-        await Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) =>LanguageSelectionScreen()),
-        );
+        _navigateTo(LanguageSelectionScreen());
       } else {
         _navigateNext();
       }
     } catch (e) {
       debugPrint('Error checking language: $e');
-      _navigateNext();
+      if (!mounted) return;
+      _navigateTo(const Login());
     }
   }
 
   Future<void> _navigateNext() async {
     if (_initialized) return;
-    _initialized = true;
 
     try {
       final token = await _pref.getToken();
@@ -120,27 +121,30 @@ class _SplashScreenState extends State<SplashScreen>
         if (role == 'trainer') {
           nextScreen = TrainerDashboard();
         } else if (role == 'trainee') {
-          nextScreen =TraineeDashboard();
+          nextScreen = TraineeDashboard();
         } else {
           nextScreen = const Login();
         }
       } else {
-        nextScreen =LanguageSelectionScreen();
+        nextScreen = const Login();
       }
 
-      if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => nextScreen),
-      );
+      _navigateTo(nextScreen);
     } catch (e) {
       debugPrint('Navigation error: $e');
-      if (!mounted) return;
+      _navigateTo(const Login());
+    }
+  }
+
+  void _navigateTo(Widget screen) {
+    if (!mounted) return;
+    _initialized = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) =>LanguageSelectionScreen()),
+        MaterialPageRoute(builder: (_) => screen),
       );
-    }
+    });
   }
 
   Widget _buildVideoOrFallback() {

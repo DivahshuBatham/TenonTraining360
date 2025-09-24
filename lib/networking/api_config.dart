@@ -9,10 +9,12 @@ class ApiConfig{
   static const String register = "register";
   static const String send_notification = "send-notification";
   static const String userLogout = "logout";
+  static const String userLogoutAllDevice = "logout_all_device";
+
   static const String saveFcmToken = "save-fcm-token";
   static const String mcqQuestion = "mcq-questions";
   static const String getTrainers = "staff_master";
-  static const String getTrainees = "guard_master";
+  static const String getTrainees = "guard_master"; 
   static const String selectVirtualCourses = "virtual_courses";
   static const String selectPhysicalCourses = "physical_courses";
   static const String getPhysicalTrainingById =  "physical-trainings/";

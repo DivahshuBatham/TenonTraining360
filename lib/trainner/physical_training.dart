@@ -250,7 +250,10 @@ class _PhysicalTrainingState extends State<PhysicalTraining> {
       return;
     }
 
-    final entry = _courseMap.firstWhere((e) => e['name'] == selectedCourse, orElse: () => {'id': '0'});
+    final entry = _courseMap.firstWhere(
+          (e) => e['name'] == selectedCourse,
+      orElse: () => {'id': '0'},
+    );
     final cid = int.tryParse(entry['id']!) ?? 0;
     if (cid == 0) {
       ApiConfig.showToastMessage('Invalid course.');
@@ -272,42 +275,70 @@ class _PhysicalTrainingState extends State<PhysicalTraining> {
     }
 
     final token = await _preferenceManager.getToken();
-    final formattedDate = '${_selectedDate!.year}-${_selectedDate!.month.toString().padLeft(2, '0')}-${_selectedDate!.day.toString().padLeft(2, '0')}';
-    final formattedTime = '${_selectedTime!.hour.toString().padLeft(2, '0')}:${_selectedTime!.minute.toString().padLeft(2, '0')}';
+    final formattedDate =
+        '${_selectedDate!.year}-${_selectedDate!.month.toString().padLeft(2, '0')}-${_selectedDate!.day.toString().padLeft(2, '0')}';
+    final formattedTime =
+        '${_selectedTime!.hour.toString().padLeft(2, '0')}:${_selectedTime!.minute.toString().padLeft(2, '0')}';
+
+    final requestData = {
+      'course_name': selectedCourse,
+      'course_id': cid,
+      'date': formattedDate,
+      'time': formattedTime,
+      'trainee_name':
+      filtered.map((e) => e['GS_Name'].toString()).toList(),
+      'site_id': selectedFilters['Site_ID'],
+      'site_name': _siteIdNameMap[selectedFilters['Site_ID']] ?? '',
+    };
 
     try {
-      final resp = await _dio.post(
+      debugPrint("📤 API Request URL: ${AppConfig.baseUrl}${ApiConfig.schedulePhysicalTraining}");
+      debugPrint("🔑 Token: $token");
+      debugPrint("📦 Request Data: $requestData");
+
+      final response = await _dio.post(
         '${AppConfig.baseUrl}${ApiConfig.schedulePhysicalTraining}',
-        options: Options(headers: {
-          'Authorization': 'Bearer $token',
-          'Accept': 'application/json',
-        }),
-        data: {
-          'course_name': selectedCourse,
-          'course_id': cid,
-          'date': formattedDate,
-          'time': formattedTime,
-          'trainee_name': filtered.map((e) => e['GS_Name'].toString()).toList(),
-          'site_id': selectedFilters['Site_ID'],
-          'site_name': _siteIdNameMap[selectedFilters['Site_ID']] ?? '',
-        },
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Accept': 'application/json',
+          },
+        ),
+        data: requestData,
       );
 
-      final data = resp.data;
-      if (data['status'] == 200) {
-        await _preferenceManager.saveTrainerId(data['trainer_id'].toString());
-        ApiConfig.showToastMessage(data['message']);
+      debugPrint("📥 Raw Response: ${response.data}");
+
+      final responseData = response.data;
+      if (responseData['status'] == 200) {
+        await _preferenceManager
+            .saveTrainerId(responseData['trainer_id'].toString());
+        ApiConfig.showToastMessage(responseData['message']);
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => ScheduleTrainingsPhysical()),
         );
-      } else {
-        ApiConfig.showToastMessage(data['message'] ?? 'Failed to schedule training.');
       }
-    } catch (_) {
-      ApiConfig.showToastMessage('Error scheduling training.');
+      else {
+        ApiConfig.showToastMessage(
+          responseData['message'] ?? 'Failed to schedule training.',
+        );
+      }
+    } on DioException catch (e) {
+      debugPrint("❌ Dio error: ${e.message}");
+      debugPrint("❌ Response: ${e.response?.data}");
+      debugPrint("❌ Status code: ${e.response?.statusCode}");
+      debugPrint("❌ Request options: ${e.requestOptions}");
+      ApiConfig.showToastMessage(
+        "API Error: ${e.response?.statusCode ?? ''} ${e.message}",
+      );
+    } catch (e, stack) {
+      debugPrint("❌ Unexpected error: $e");
+      debugPrint("❌ Stacktrace: $stack");
+      ApiConfig.showToastMessage("Unexpected error: $e");
     }
   }
+
 
   @override
   void dispose() {
@@ -414,6 +445,24 @@ class _PhysicalTrainingState extends State<PhysicalTraining> {
                   ),
                 ),
               ]),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  if (_selectedDate != null)
+                    Text(
+                      "Date: ${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}",
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                    ),
+
+                  if (_selectedTime != null)
+                    Text(
+                      "Time: ${_selectedTime!.format(context)}",
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                    ),
+
+                ],
+
+              ),
 
               const SizedBox(height: 20),
 

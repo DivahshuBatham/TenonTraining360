@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -9,7 +10,8 @@ import 'package:tenon_training_app/shared_preference/shared_preference_manager.d
 import '../course/CreateCourse.dart';
 import '../environment/Environment.dart';
 import '../networking/api_config.dart';
-import 'ScheduleTrainingsVirtual.dart';
+import '../utils/ApiClient.dart';
+import 'GuardTrainingScreen.dart';
 import 'ScheduleTrainingsPhysical.dart';
 
 class TrainerDashboard extends StatefulWidget {
@@ -41,26 +43,32 @@ class TrainerDashboardState extends State<TrainerDashboard> {
   final allFormatData = [
     _FormatData('Completed', 120, Colors.green, 'Physical'),
     _FormatData('Failed', 30, Colors.red, 'Physical'),
-    // _FormatData('Pending', 50, Colors.orange, 'Physical'),
     _FormatData('Pending', 50, Colors.orange, 'Virtual'),
-    // _FormatData('Completed', 80, Colors.green, 'Virtual'),
-    // _FormatData('Failed', 20, Colors.red, 'Virtual'),
   ];
 
   double get averageRating => 4.5;
+
   List<_FormatData> get formatData =>
       selectedTrainingType == 'All'
           ? allFormatData
           : allFormatData.where((e) => e.type == selectedTrainingType).toList();
+
   List<_BranchPerformance> get branchPerformance =>
       selectedTrainingType == 'All'
           ? allBranchPerformance
-          : allBranchPerformance.where((e) => e.type == selectedTrainingType).toList();
+          : allBranchPerformance
+          .where((e) => e.type == selectedTrainingType)
+          .toList();
+
   List<_CourseAttendance> get courseAttendance =>
       selectedTrainingType == 'All'
           ? allCourseAttendance
-          : allCourseAttendance.where((e) => e.type == selectedTrainingType).toList();
+          : allCourseAttendance
+          .where((e) => e.type == selectedTrainingType)
+          .toList();
+
   double get totalCount => formatData.fold(0, (sum, d) => sum + d.count);
+
   double get averageScore {
     if (courseAttendance.isEmpty) return 0;
     double total = courseAttendance.fold(0, (sum, e) => sum + e.attendance);
@@ -103,8 +111,7 @@ class TrainerDashboardState extends State<TrainerDashboard> {
                         ? Icons.keyboard_arrow_up
                         : Icons.keyboard_arrow_down),
                     iconSize: 30,
-                    tooltip:
-                    showDashboard ? 'Hide Dashboard' : 'Show Dashboard',
+                    tooltip: showDashboard ? 'Hide Dashboard' : 'Show Dashboard',
                     onPressed: () =>
                         setState(() => showDashboard = !showDashboard),
                   ),
@@ -122,18 +129,29 @@ class TrainerDashboardState extends State<TrainerDashboard> {
                   SizedBox(height: 16),
                 ],
                 if (_showTrainingButtons)
-                  Row(
-                    children: [
-                      Expanded(
-                          child: _cardButton(Icons.group, 'OnSite Training',
-                              Colors.blue, ScheduleTrainingsPhysical())),
-                      SizedBox(width: 16),
-                      Expanded(
-                          child: _cardButton(Icons.calendar_today,
-                              'Virtual Training', Colors.green,
-                              ScheduleTrainingsVirtual())),
-                    ],
-                  ),
+                  SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _cardButton(
+                        Icons.corporate_fare_rounded,
+                        'Guard Training',
+                        Colors.green,
+                        GuardTrainingScreen(),
+                      ),
+                    ),
+                  ],
+                ),
+                Row(
+                  children: [
+                    Expanded(
+                        child: _cardButton(
+                            Icons.corporate_fare_rounded,
+                            'Corporate Training',
+                            Colors.green,
+                            ScheduleTrainingsPhysical()))
+                  ],
+                )
               ],
             ),
           ),
@@ -159,10 +177,6 @@ class TrainerDashboardState extends State<TrainerDashboard> {
               averageRating.toStringAsFixed(1),
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            // Text(
-            //   'Average Rating',
-            //   style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-            // ),
           ],
         ),
       ),
@@ -177,8 +191,7 @@ class TrainerDashboardState extends State<TrainerDashboard> {
       child: ChoiceChip(
         label: Text(type),
         selected: selectedTrainingType == type,
-        onSelected: (_) =>
-            setState(() => selectedTrainingType = type),
+        onSelected: (_) => setState(() => selectedTrainingType = type),
       ),
     ))
         .toList(),
@@ -195,8 +208,7 @@ class TrainerDashboardState extends State<TrainerDashboard> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            _buildSummaryTile('Courses Attended', '$totalCourses',
-                Colors.blue),
+            _buildSummaryTile('Courses Attended', '$totalCourses', Colors.blue),
             Container(width: 1, height: 40, color: Colors.grey.shade300),
             _buildSummaryTile('Average Score', avg, Colors.green),
           ],
@@ -205,14 +217,13 @@ class TrainerDashboardState extends State<TrainerDashboard> {
     );
   }
 
-  Widget _buildSummaryTile(String title, String value, Color color) =>
-      Column(
-        children: [
-          Text(title, style: TextStyle(fontWeight: FontWeight.bold)),
-          SizedBox(height: 4),
-          Text(value, style: TextStyle(fontSize: 20, color: color)),
-        ],
-      );
+  Widget _buildSummaryTile(String title, String value, Color color) => Column(
+    children: [
+      Text(title, style: TextStyle(fontWeight: FontWeight.bold)),
+      SizedBox(height: 4),
+      Text(value, style: TextStyle(fontSize: 20, color: color)),
+    ],
+  );
 
   Widget _wrapCard(String title, Widget child) => Card(
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -282,7 +293,6 @@ class TrainerDashboardState extends State<TrainerDashboard> {
     children: [
       SizedBox(height: 40),
       SizedBox(
-
         height: 100,
         child: PieChart(
           PieChartData(
@@ -315,13 +325,9 @@ class TrainerDashboardState extends State<TrainerDashboard> {
         ),
       ),
       SizedBox(height: 20),
-
-      // Text(
-      //   'Total: ${totalCount.toInt()}',
-      //   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-      // ),
     ],
   );
+
   Widget _cardButton(
       IconData icon, String label, Color color, Widget page) =>
       Card(
@@ -348,8 +354,8 @@ class TrainerDashboardState extends State<TrainerDashboard> {
   Widget _buildDrawer() => Drawer(
     child: ListView(padding: EdgeInsets.zero, children: [
       Container(
-        padding:
-        EdgeInsets.only(top: MediaQuery.of(context).padding.top + 20, bottom: 16),
+        padding: EdgeInsets.only(
+            top: MediaQuery.of(context).padding.top + 20, bottom: 16),
         color: Colors.purple,
         child: Column(children: [
           CircleAvatar(
@@ -361,44 +367,220 @@ class TrainerDashboardState extends State<TrainerDashboard> {
           SizedBox(height: 10),
         ]),
       ),
-      ListTile(leading: Icon(Icons.home), title: Text("Home"), onTap: () => Navigator.pop(context)),
-      ListTile(leading: Icon(Icons.person), title: Text("Profile"), onTap: () {}),
-      ListTile(leading: Icon(Icons.settings), title: Text("Create Course"), onTap: () {
-        Navigator.pop(context);
-        Navigator.push(context, MaterialPageRoute(builder: (_) => CreateCourse()));
-      }),
-      ListTile(leading: Icon(Icons.logout), title: Text("Logout"), onTap: () => userLogout(context)),
+      ListTile(
+          leading: Icon(Icons.home),
+          title: Text("Home"),
+          onTap: () => Navigator.pop(context)),
+      ListTile(
+          leading: Icon(Icons.person), title: Text("Profile"), onTap: () {}),
+      ListTile(
+          leading: Icon(Icons.settings),
+          title: Text("Create Course"),
+          onTap: () {
+            Navigator.pop(context);
+            Navigator.push(
+                context, MaterialPageRoute(builder: (_) => CreateCourse()));
+          }),
+      ListTile(
+          leading: Icon(Icons.logout),
+          title: Text("Logout"),
+          onTap: () => _showLogoutDialog(context)),
     ]),
   );
 
+
+  // ------------------- LOGOUT DIALOG -------------------
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text("Logout"),
+        content: Text("Choose logout option:"),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context); // Close dialog
+              userLogout(context); // Current device logout
+            },
+            child: Text("Current Device"),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context); // Close dialog
+              logoutAllDevices(context);  
+              // Optionally implement API call here for all devices
+            },
+            child: Text("All Devices"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ------------------- USER LOGOUT WITH CRASHLYTICS -------------------
   Future<void> userLogout(BuildContext context) async {
     final token = await _pref.getToken();
-    final dio = Dio(BaseOptions(
-      baseUrl: AppConfig.baseUrl,
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
-      connectTimeout: Duration(seconds: 10),
-      receiveTimeout: Duration(seconds: 10),
-    ));
+
+    // If token is null or empty, clear everything and go to login
+    if (token == null || token.isEmpty) {
+      await _pref.clearToken();
+      await _pref.removeRole();
+      if (context.mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const Login()),
+        );
+      }
+      return;
+    }
+
+    final dio = ApiClient.dio;
+    dio.options.headers["Authorization"] = "Bearer $token";
+
     try {
-      final resp = await dio.post(ApiConfig.userLogout);
+      final resp = await dio.post(
+        ApiConfig.userLogout,
+        options: Options(validateStatus: (_) => true),
+      );
+
       if (resp.statusCode == 200) {
         await _pref.clearToken();
-        ApiConfig.showToastMessage(resp.data['message']);
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => Login()));
-      } else {
-        ApiConfig.showToastMessage('Logout failed. Try again.');
+        await _pref.removeRole();
+        ApiConfig.showToastMessage(resp.data['message'] ?? "Logged out successfully");
+
+        if (context.mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const Login()),
+          );
+        }
       }
-    } catch (_) {
-      ApiConfig.showToastMessage('An error occurred during logout.');
+      // Handle 401 Unauthorized explicitly
+      else if (resp.statusCode == 401) {
+        await _pref.clearToken();
+        await _pref.removeRole();
+        ApiConfig.showToastMessage("Session expired. Please login again.");
+        if (context.mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const Login()),
+          );
+        }
+      }
+      else {
+        // Other errors
+        ApiConfig.showToastMessage(
+          resp.data?['message'] ?? "Failed to logout. Try again.",
+        );
+      }
+    } catch (e) {
+      // Catch any other network / exception
+      await _pref.clearToken();
+      await _pref.removeRole();
+      ApiConfig.showToastMessage("Error during logout. Please login again.");
+      if (context.mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const Login()),
+        );
+      }
     }
   }
+
+
+  Future<void> logoutAllDevices(BuildContext context) async {
+    final token = await _pref.getToken();
+
+    if (token == null || token.isEmpty) {
+      await _pref.clearToken();
+      await _pref.removeRole(); // 👈 clear role here too
+      if (context.mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const Login()),
+        );
+      }
+      return;
+    }
+
+    final dio = ApiClient.dio;
+    dio.options.headers["Authorization"] = "Bearer $token";
+
+    FirebaseCrashlytics.instance.setCustomKey("last_api_called", "logoutAllDevices");
+
+    try {
+      final resp = await dio.post(
+        ApiConfig.userLogoutAllDevice,
+        options: Options(validateStatus: (_) => true),
+      );
+
+      FirebaseCrashlytics.instance
+          .setCustomKey("last_status_code", resp.statusCode ?? 0);
+
+      if (resp.statusCode == 200 && resp.data['status'] == true) {
+        // Clear token + role locally
+        await _pref.clearToken();
+        await _pref.removeRole(); // 👈 added
+        ApiConfig.showToastMessage(
+            resp.data['message'] ?? "Logged out from all devices");
+
+        if (context.mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const Login()),
+          );
+        }
+      } else if (resp.statusCode == 401) {
+        await _pref.clearToken();
+        await _pref.removeRole(); // 👈 added
+        ApiConfig.showToastMessage("Session expired. Please login again.");
+
+        if (context.mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const Login()),
+          );
+        }
+      } else {
+        ApiConfig.showToastMessage(
+            resp.data['message'] ?? "Logout failed. Try again.");
+        FirebaseCrashlytics.instance.recordError(
+          Exception("LogoutAll failed with status ${resp.statusCode}"),
+          StackTrace.current,
+          reason: "Non-fatal logoutAll failure",
+        );
+      }
+    } catch (e, s) {
+      await _pref.clearToken();
+      await _pref.removeRole(); // 👈 also in catch
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: "Unexpected error during logoutAll",
+      );
+      ApiConfig.showToastMessage("An error occurred during logout from all devices.");
+      if (context.mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const Login()),
+        );
+      }
+    }
+  }
+
+
+
 }
 
+
+
+
+
+// ------------------- DATA MODELS -------------------
 class _BranchPerformance {
   final String branch;
   final double performance;
   final String type;
-
   _BranchPerformance(this.branch, this.performance, this.type);
 }
 
@@ -406,7 +588,6 @@ class _CourseAttendance {
   final String course;
   final double attendance;
   final String type;
-
   _CourseAttendance(this.course, this.attendance, this.type);
 }
 
@@ -415,11 +596,10 @@ class _FormatData {
   final double count;
   final Color color;
   final String type;
-
   _FormatData(this.category, this.count, this.color, this.type);
 }
 
-// ☆ Star rating widget supporting full, half & empty stars
+// ------------------- STAR RATING WIDGET -------------------
 class StarRatingWidget extends StatelessWidget {
   final int starCount;
   final double rating;

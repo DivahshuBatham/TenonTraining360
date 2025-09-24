@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:io';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -110,7 +112,6 @@ class _LoginScreenState extends State<Login> {
   }
 
 
-
   Future<void> _verifyOtp(String mobileNumber, String otp) async {
     if (otp.isEmpty) {
       ApiConfig.showToastMessage("Please enter OTP");
@@ -123,9 +124,41 @@ class _LoginScreenState extends State<Login> {
 
     try {
       final String url = '${AppConfig.baseUrl}${ApiConfig.verify_otp}';
-      FormData formData = FormData.fromMap({'mobile': mobileNumber, 'otp': otp});
 
-      Response response = await dio.post(url, data: formData);
+      // Get device info
+      final deviceInfoPlugin = DeviceInfoPlugin();
+      String deviceName = 'Unknown Device';
+      String deviceModel = 'Unknown Model';
+
+      if (Platform.isAndroid) {
+        final androidInfo = await deviceInfoPlugin.androidInfo;
+        deviceName = androidInfo.brand ?? 'Unknown';
+        deviceModel = androidInfo.model ?? 'Unknown';
+      } else if (Platform.isIOS) {
+        final iosInfo = await deviceInfoPlugin.iosInfo;
+        deviceName = iosInfo.name ?? 'Unknown';
+        deviceModel = iosInfo.model ?? 'Unknown';
+      }
+
+      // Prepare FormData
+      FormData formData = FormData.fromMap({
+        'mobile': mobileNumber,
+        'otp': otp,
+        'device_name': deviceName,
+        'device_model': deviceModel,
+      });
+
+      // Send User-Agent header (optional, can keep for fallback)
+      Options options = Options(
+        headers: {
+          'User-Agent':
+          'TenonApp/1.0 (Flutter; ${Platform.operatingSystem} ${Platform.operatingSystemVersion})',
+        },
+      );
+
+      // Make POST request
+      Response response = await dio.post(url, data: formData, options: options);
+
       debugPrint('OTP Verify Response: ${response.data}');
       final responseData = response.data;
 
@@ -157,15 +190,18 @@ class _LoginScreenState extends State<Login> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => role == "trainee" ? TraineeDashboard() : TrainerDashboard(),
+            builder: (context) =>
+            role == "trainee" ? TraineeDashboard() : TrainerDashboard(),
           ),
         );
       }
     } on DioError catch (dioError) {
-      // This catches 401 and other failed responses
       if (dioError.response != null) {
         final responseData = dioError.response?.data;
-        final errorMessage = responseData['details']?['message'] ?? responseData['message'] ?? "OTP verification failed";
+        final errorMessage =
+            responseData['details']?['message'] ??
+                responseData['message'] ??
+                "OTP verification failed";
         ApiConfig.showToastMessage(errorMessage);
         debugPrint('OTP Error Response: $responseData');
       } else {
@@ -177,6 +213,7 @@ class _LoginScreenState extends State<Login> {
       if (mounted) setState(() => _isLoading = false);
     }
   }
+
 
 
   @override

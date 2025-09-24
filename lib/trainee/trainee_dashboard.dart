@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -12,6 +13,8 @@ import '../environment/Environment.dart';
 import '../login.dart';
 import '../networking/api_config.dart';
 import '../shared_preference/shared_preference_manager.dart';
+import '../utils/ApiClient.dart';
+import 'GuardTrainingByTrainee.dart';
 import 'PhysicalTrainingByTrainee.dart';
 import 'VirtualTrainingByTrainee.dart';
 
@@ -168,16 +171,36 @@ class _TraineeDashboardState extends State<TraineeDashboard> {
                 ),
                 secondChild: SizedBox.shrink(),
               ),
+              // Row(
+              //   children: [
+              //     Expanded(
+              //       child: _buildCard(Icons.person, "Virtual Training", Colors.blue, () {
+              //         Navigator.push(context, MaterialPageRoute(builder: (_) => VirtualTrainingByTrainee()));
+              //       }),
+              //     ),
+              //     SizedBox(width: 16),
+              //     Expanded(
+              //       child: _buildCard(Icons.assessment, "Onsite Training", Colors.green, () {
+              //         Navigator.push(context, MaterialPageRoute(builder: (_) => PhysicalTrainingByTrainee()));
+              //       }),
+              //     ),
+              //   ],
+              // ),
+
               Row(
                 children: [
                   Expanded(
-                    child: _buildCard(Icons.person, "Virtual Training", Colors.blue, () {
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => VirtualTrainingByTrainee()));
+                    child: _buildCard(Icons.person, "Guard Training", Colors.blue, () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => GuardTrainingByTrainee()));
                     }),
                   ),
-                  SizedBox(width: 16),
+                ],
+              ),
+              SizedBox(width: 16),
+              Row(
+                children: [
                   Expanded(
-                    child: _buildCard(Icons.assessment, "Onsite Training", Colors.green, () {
+                    child: _buildCard(Icons.assessment, "Corporate Training", Colors.green, () {
                       Navigator.push(context, MaterialPageRoute(builder: (_) => PhysicalTrainingByTrainee()));
                     }),
                   ),
@@ -235,27 +258,187 @@ class _TraineeDashboardState extends State<TraineeDashboard> {
         ListTile(leading: Icon(Icons.home), title: Text("Home"), onTap: () => Navigator.pop(context)),
         ListTile(leading: Icon(Icons.favorite), title: Text("Favorite")),
         ListTile(leading: Icon(Icons.settings), title: Text("Settings")),
-        ListTile(leading: Icon(Icons.logout), title: Text("Logout"), onTap: () => userLogout(context)),
+        ListTile(leading: Icon(Icons.logout), title: Text("Logout"), onTap: () => _showLogoutDialog(context)),
       ],
     ),
   );
 
-  Future<void> userLogout(BuildContext ctx) async {
-    final pm = SharedPreferenceManager();
-    final tok = await pm.getToken();
-    final dio = Dio(BaseOptions(
-      baseUrl: AppConfig.baseUrl,
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $tok'},
-    ));
+  // ------------------- LOGOUT DIALOG -------------------
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text("Logout"),
+        content: Text("Choose logout option:"),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context); // Close dialog
+              userLogout(context); // Current device logout
+            },
+            child: Text("Current Device"),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context); // Close dialog
+              logoutAllDevices(context);
+              // Optionally implement API call here for all devices
+            },
+            child: Text("All Devices"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ------------------- USER LOGOUT WITH CRASHLYTICS -------------------
+  Future<void> userLogout(BuildContext context) async {
+    final token = await _prefs.getToken();
+
+    // If token is null or empty, clear everything and go to login
+    if (token == null || token.isEmpty) {
+      await _prefs.clearToken();
+      await _prefs.removeRole();
+      if (context.mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const Login()),
+        );
+      }
+      return;
+    }
+
+    final dio = ApiClient.dio;
+    dio.options.headers["Authorization"] = "Bearer $token";
+
     try {
-      final res = await dio.post(ApiConfig.userLogout);
-      if (res.statusCode == 200) {
-        await pm.clearToken();
-        ApiConfig.showToastMessage(res.data['message']);
-        Navigator.pushReplacement(ctx, MaterialPageRoute(builder: (_) => Login()));
+      final resp = await dio.post(
+        ApiConfig.userLogout,
+        options: Options(validateStatus: (_) => true),
+      );
+
+      if (resp.statusCode == 200) {
+        await _prefs.clearToken();
+        await _prefs.removeRole();
+        ApiConfig.showToastMessage(resp.data['message'] ?? "Logged out successfully");
+
+        if (context.mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const Login()),
+          );
+        }
+      }
+      // Handle 401 Unauthorized explicitly
+      else if (resp.statusCode == 401) {
+        await _prefs.clearToken();
+        await _prefs.removeRole();
+        ApiConfig.showToastMessage("Session expired. Please login again.");
+        if (context.mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const Login()),
+          );
+        }
+      }
+      else {
+        // Other errors
+        ApiConfig.showToastMessage(
+          resp.data?['message'] ?? "Failed to logout. Try again.",
+        );
       }
     } catch (e) {
-      ApiConfig.showToastMessage('An error occurred during logout.');
+      // Catch any other network / exception
+      await _prefs.clearToken();
+      await _prefs.removeRole();
+      ApiConfig.showToastMessage("Error during logout. Please login again.");
+      if (context.mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const Login()),
+        );
+      }
+    }
+  }
+
+
+  Future<void> logoutAllDevices(BuildContext context) async {
+    final token = await _prefs.getToken();
+
+    if (token == null || token.isEmpty) {
+      await _prefs.clearToken();
+      await _prefs.removeRole(); // 👈 clear role here too
+      if (context.mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const Login()),
+        );
+      }
+      return;
+    }
+
+    final dio = ApiClient.dio;
+    dio.options.headers["Authorization"] = "Bearer $token";
+
+    FirebaseCrashlytics.instance.setCustomKey("last_api_called", "logoutAllDevices");
+
+    try {
+      final resp = await dio.post(
+        ApiConfig.userLogoutAllDevice,
+        options: Options(validateStatus: (_) => true),
+      );
+
+      FirebaseCrashlytics.instance
+          .setCustomKey("last_status_code", resp.statusCode ?? 0);
+
+      if (resp.statusCode == 200 && resp.data['status'] == true) {
+        // Clear token + role locally
+        await _prefs.clearToken();
+        await _prefs.removeRole(); // 👈 added
+        ApiConfig.showToastMessage(
+            resp.data['message'] ?? "Logged out from all devices");
+
+        if (context.mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const Login()),
+          );
+        }
+      } else if (resp.statusCode == 401) {
+        await _prefs.clearToken();
+        await _prefs.removeRole(); // 👈 added
+        ApiConfig.showToastMessage("Session expired. Please login again.");
+
+        if (context.mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const Login()),
+          );
+        }
+      } else {
+        ApiConfig.showToastMessage(
+            resp.data['message'] ?? "Logout failed. Try again.");
+        FirebaseCrashlytics.instance.recordError(
+          Exception("LogoutAll failed with status ${resp.statusCode}"),
+          StackTrace.current,
+          reason: "Non-fatal logoutAll failure",
+        );
+      }
+    } catch (e, s) {
+      await _prefs.clearToken();
+      await _prefs.removeRole(); // 👈 also in catch
+      FirebaseCrashlytics.instance.recordError(
+        e,
+        s,
+        reason: "Unexpected error during logoutAll",
+      );
+      ApiConfig.showToastMessage("An error occurred during logout from all devices.");
+      if (context.mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const Login()),
+        );
+      }
     }
   }
 
